@@ -142,6 +142,9 @@ public class Address {
 	}
 
 	public String getFullAddress() {
+		System.out.println(
+				this.streetNo + " " + this.street + ", " + this.city + ", " + this.state + " - " + this.postcode);
+		
 		return this.streetNo + " " + this.street + ", " + this.city + ", "
 				+ this.state + " - " + this.postcode;
 	}

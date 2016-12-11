@@ -6,6 +6,7 @@ import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.OpenOption;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.List;
@@ -16,6 +17,7 @@ import fitnesse.ContextConfigurator;
 import fitnesse.FitNesseContext;
 import fitnesse.reporting.history.JunitReFormatter;
 import fitnesse.reporting.history.SuiteHistoryFormatter;
+import fitnesse.reporting.history.SuiteXmlReformatter;
 import fitnesse.responders.run.SuiteResponder.HistoryWriterFactory;
 import fitnesse.testrunner.MultipleTestsRunner;
 import fitnesse.testrunner.PagesByTestSystem;
@@ -65,17 +67,20 @@ public class TestHelper {
       List<WikiPage> pagesToExecute = new SuiteContentsFinder( suiteRootPage, null, context.getRootPage() ).getAllPagesToRunForThisSuite();
       final PagesByTestSystem pagesByTestSystem = new PagesByTestSystem( pagesToExecute, context.getRootPage() );
       MultipleTestsRunner testRunner = new MultipleTestsRunner( pagesByTestSystem, context.testSystemFactory );
+      SuiteXmlReformatter suiteXmlReformatter = makeSuiteXmlFormatter(suiteRootPage, launch.getPageName());
+      
       testRunner.addTestSystemListener( resultListener );
       testRunner.addTestSystemListener( htmlResultsFormatter );
       testRunner.addTestSystemListener( suiteHistoryFormatter );
       testRunner.addExecutionLogListener( suiteHistoryFormatter );
       testRunner.addTestSystemListener( xmlResultsFormatter );
+      testRunner.addTestSystemListener( suiteXmlReformatter );
 
       testRunner.executeTestPages();
       htmlResultsFormatter.close();
       return htmlResultsFormatter.getTotalSummary();
    }
-
+   
    public void setDebugMode( final boolean enabled ) {
       this.debug = enabled;
    }
@@ -93,6 +98,22 @@ public class TestHelper {
       }
       return suiteHistoryFormatter;
    }
+
+	private SuiteXmlReformatter makeSuiteXmlFormatter(WikiPage page, String name) throws IOException {
+		OpenOption[] options = { StandardOpenOption.CREATE, StandardOpenOption.WRITE,
+				StandardOpenOption.TRUNCATE_EXISTING };
+		
+		Path suiteDir = Paths.get(this.outputPath, "suite");
+		Files.createDirectories(suiteDir);
+		
+		BufferedWriter writer = Files.newBufferedWriter(suiteDir.resolve(name + ".xml"),
+				StandardCharsets.UTF_8, options);
+
+		SuiteXmlReformatter xmlFormatter = new SuiteXmlReformatter(context, context.getRootPage(), writer,
+				makeSuiteHistoryFormatter( page ));
+		xmlFormatter.includeHtml();
+		return xmlFormatter;
+	}
 
    private Writer makeXmlReportWriter() throws IOException {
       OpenOption[] options = { StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING };
